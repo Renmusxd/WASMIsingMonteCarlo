@@ -21,8 +21,7 @@ console_error_panic_hook = "^0.1"
 
 [dependencies.ising_monte_carlo]
 version = "^1.0"
-#git = "https://github.com/Renmusxd/IsingMonteCarlo"
-path = "../IsingMonteCarlo"
+git = "https://github.com/Renmusxd/IsingMonteCarlo"
 default-features = false
 
 [dev-dependencies]
