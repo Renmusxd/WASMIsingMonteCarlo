@@ -1,0 +1,176 @@
+<html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+</head>
+<body>
+
+<form onsubmit="make_new_lattice()" action="javascript:void(0);">
+    <input type="text" maxlength="4" placeholder="vars" id="num_vars" name="num_vars">
+    <input type="text" maxlength="4" placeholder="beta" id="beta" name="beta">
+    <input type="text" maxlength="4" placeholder="gamma" id="gamma" name="gamma">
+    <input type="submit" value="Set">
+</form>
+<form onsubmit="run_the_lattice()" action="javascript:void(0);">
+    <input type="text" placeholder="timesteps" value="1" id="timesteps" name="timesteps">
+    <input type="submit" value="Step">
+</form>
+
+<svg width="100%" height="100%">
+    <g id="variables"></g>
+    <g id="ops"></g>
+    <g id="init"></g>
+</svg>
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="pkg/wasm_monte_carlo.js"></script>
+<script type="module">
+    // Use ES module import syntax to import functionality from the module
+    // that we have compiled.
+    //
+    // Note that the `default` import is an initialization function which
+    // will "boot" the module and make it ready to use. Currently browsers
+    // don't support natively imported WebAssembly as an ES module, but
+    // eventually the manual initialization won't be required!
+    const init_panic_hook = wasm_bindgen;
+
+    async function run() {
+        await wasm_bindgen('./pkg/wasm_monte_carlo_bg.wasm');
+        // init_panic_hook()
+    }
+    run();
+</script>
+
+<script>
+    const {Lattice} = wasm_bindgen;
+
+    function range(start, count) {
+        return Array.apply(0, Array(count))
+            .map((element, index) => index + start);
+    }
+
+    function get_lattice(n, beta, gamma) {
+        let edge_as = range(0,n);
+        let edge_bs = range(0,n).map((i) => (i+1)%n);
+        let edge_js = range(0,n).map((i) => -1.0);
+        return Lattice.new(edge_as, edge_bs, edge_js, gamma, beta)
+    }
+
+    function run_lattice(lattice, timesteps) {
+        lattice.run_quantum_monte_carlo(timesteps)
+    }
+
+    function update_from_lattice(lattice) {
+        const nvars = lattice.get_nvars();
+        const cutoff = lattice.get_cutoff();
+
+        const data = range(0, cutoff).map((p) => {
+            let nvars = lattice.get_nvars_for_op(p);
+            if (typeof nvars !== 'undefined') {
+                return range(0, nvars).map((i) => {
+                    return {
+                        p: p,
+                        v: lattice.get_nth_op_var_i(p, i),
+                        input: lattice.get_nth_op_var_i_input(p, i),
+                        out: lattice.get_nth_op_var_i_output(p, i)
+                    };
+                })
+            } else {
+                return []
+            }
+        }).flat();
+
+        let svg = d3.select('svg');
+        let bars = svg
+            .select('#ops')
+            .selectAll('rect')
+            .data(data);
+        bars.enter()
+            .append('rect')
+            .merge(bars)
+            .attr('x', function(d) {
+                return d.v*10
+            })
+            .attr('y', function(d) {
+                return (1+d.p)*10
+            })
+            .attr('width', 5)
+            .attr('height', 5)
+            .attr('style', function(d) {
+                if (d.out) {
+                    return "fill:rgb(255,0,0)"
+                } else {
+                    return "fill:rgb(0,0,0)"
+                }
+            });
+        bars.exit().remove();
+
+        const state_data = range(0, nvars).map(function(i) {
+            return {
+                v: i,
+                state: lattice.get_state(i)
+            };
+        })
+        let state = svg
+            .select('#init')
+            .selectAll('circle')
+            .data(state_data);
+        state.enter()
+            .append('circle')
+            .merge(state)
+            .attr('cx', function(d) {
+                return d.v*10 + 2.5
+            })
+            .attr('cy', 5)
+            .attr('r', 2.5)
+            .attr('style', function(d) {
+                if (d.state) {
+                    return "fill:rgb(255,0,0)"
+                } else {
+                    return "fill:rgb(0,0,0)"
+                }
+            });
+        state.exit().remove();
+
+        const var_data = d3.range(nvars).map(function(i) {
+            return {
+                i:i,
+            }
+        });
+        let vars = svg
+            .select("#variables")
+            .selectAll('line')
+            .data(var_data);
+        vars.enter()
+            .append('line')
+            .merge(vars)
+            .transition(500)
+            .attr('x1', function(d) {
+                return d.i*10 + 2.5
+            })
+            .attr('x2', function(d) {
+                return d.i*10 + 2.5
+            })
+            .attr('y1', 0)
+            .attr('y2', cutoff*10)
+            .attr('style', 'stroke:rgb(175,175,175);stroke-width:2.0');
+        vars.exit().remove();
+    }
+
+    let global_lattice = null;
+    function make_new_lattice() {
+        let num = parseInt(document.getElementById("num_vars").value);
+        let beta = parseFloat(document.getElementById("beta").value);
+        let gamma = parseFloat(document.getElementById("gamma").value);
+        global_lattice = get_lattice(num, beta, gamma);
+        update_from_lattice(global_lattice)
+    }
+
+    function run_the_lattice() {
+        let ts = parseInt(document.getElementById("timesteps").value);
+        run_lattice(global_lattice, ts);
+        update_from_lattice(global_lattice);
+    }
+</script>
+
+</body>
+</html>
