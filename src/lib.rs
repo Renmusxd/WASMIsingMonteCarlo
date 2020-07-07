@@ -1,17 +1,14 @@
 extern crate console_error_panic_hook;
 use ising_monte_carlo;
-use ising_monte_carlo::sse::fast_ops::*;
-use ising_monte_carlo::sse::qmc_graph::QMCGraph;
+use ising_monte_carlo::sse::qmc_graph::DefaultQMCGraph;
 use ising_monte_carlo::sse::qmc_traits::{LoopUpdater, OpContainer};
 use rand::rngs::OsRng;
 use wasm_bindgen::prelude::*;
 use rand::Rng;
 
-type DefaultQMCGraph = QMCGraph<OsRng, FastOpNode, FastOps, FastOps>;
-
 #[wasm_bindgen]
 pub struct Lattice {
-    qmc_graph: DefaultQMCGraph,
+    qmc_graph: DefaultQMCGraph<OsRng>,
     beta: f64,
 }
 
@@ -43,7 +40,7 @@ impl Lattice {
 
                 let mut rng = OsRng::default();
                 rng.gen_bool(0.5);
-                let qmc_graph = DefaultQMCGraph::new_with_rng(
+                let qmc_graph = DefaultQMCGraph::<OsRng>::new_with_rng(
                     edges,
                     transverse,
                     nvars,
