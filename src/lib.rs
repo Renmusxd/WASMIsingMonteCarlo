@@ -1,10 +1,8 @@
 extern crate console_error_panic_hook;
-use ising_monte_carlo;
 use ising_monte_carlo::sse::qmc_graph::DefaultQMCGraph;
 use ising_monte_carlo::sse::qmc_traits::{LoopUpdater, OpContainer};
 use rand::rngs::OsRng;
 use wasm_bindgen::prelude::*;
-use rand::Rng;
 
 #[wasm_bindgen]
 pub struct Lattice {
@@ -29,7 +27,7 @@ impl Lattice {
                 "Transverse field must be greater than 0.0",
             ))
         } else {
-            let nvars = edge_a.iter().chain(edge_b.iter()).max().map(|n| *n+1);
+            let nvars = edge_a.iter().chain(edge_b.iter()).max().map(|n| *n + 1);
             if let Some(nvars) = nvars {
                 let edges = edge_a
                     .iter()
@@ -38,15 +36,13 @@ impl Lattice {
                     .zip(edge_j.iter().cloned())
                     .collect();
 
-                let mut rng = OsRng::default();
-                rng.gen_bool(0.5);
                 let qmc_graph = DefaultQMCGraph::<OsRng>::new_with_rng(
                     edges,
                     transverse,
                     nvars,
                     false,
                     false,
-                    rng,
+                    OsRng::default(),
                     None,
                 );
                 Ok(Lattice { qmc_graph, beta })
@@ -79,7 +75,9 @@ impl Lattice {
         self.qmc_graph.get_manager_ref().get_n()
     }
 
-    pub fn get_cutoff(&self) -> usize { self.qmc_graph.get_cutoff() }
+    pub fn get_cutoff(&self) -> usize {
+        self.qmc_graph.get_cutoff()
+    }
 
     pub fn get_p_for_n(&self, n: usize) -> usize {
         self.qmc_graph.get_manager_ref().get_nth_p(n)
