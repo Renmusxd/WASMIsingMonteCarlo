@@ -40,8 +40,6 @@ impl Lattice {
                     edges,
                     transverse,
                     nvars,
-                    false,
-                    false,
                     OsRng::default(),
                     None,
                 );
