@@ -61,6 +61,26 @@ impl Lattice {
         self.qmc_graph.timesteps(timesteps, self.beta)
     }
 
+    /// Run only the diagonal parts of a quantum monte carlo simulation.
+    ///
+    /// # Arguments:
+    /// * `timesteps`: number of timesteps to run.
+    pub fn run_diagonal_quantum_monte_carlo(&mut self, timesteps: usize) {
+        (0 .. timesteps).for_each(|_| {
+            self.qmc_graph.single_diagonal_step(self.beta)
+        })
+    }
+
+    /// Run only the offdiagonal parts of a quantum monte carlo simulation.
+    ///
+    /// # Arguments:
+    /// * `timesteps`: number of timesteps to run.
+    pub fn run_offdiagonal_quantum_monte_carlo(&mut self, timesteps: usize) {
+        (0 .. timesteps).for_each(|_| {
+            self.qmc_graph.single_offdiagonal_step()
+        })
+    }
+
     pub fn get_nvars(&self) -> usize {
         self.qmc_graph.get_nvars()
     }

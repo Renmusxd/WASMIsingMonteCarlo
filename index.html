@@ -113,6 +113,14 @@
         lattice.run_quantum_monte_carlo(timesteps)
     }
 
+    function run_lattice_diagonal(lattice, timesteps) {
+        lattice.run_diagonal_quantum_monte_carlo(timesteps)
+    }
+
+    function run_lattice_offdiagonal(lattice, timesteps) {
+        lattice.run_offdiagonal_quantum_monte_carlo(timesteps)
+    }
+
     function update_from_lattice(lattice) {
         const nvars = lattice.get_nvars();
         const cutoff = lattice.get_cutoff();
@@ -406,6 +414,34 @@
         }
 
         run_lattice(global_lattice, ts);
+        update_from_lattice(global_lattice);
+    }
+
+    function run_the_lattice_diagonal() {
+        if (global_lattice == null) {
+            make_new_lattice()
+        }
+        let ts = parseInt(document.getElementById("timesteps").value);
+        if (isNaN(ts)) {
+            ts = 1;
+            document.getElementById("timesteps").value = ts.toString();
+        }
+
+        run_lattice_diagonal(global_lattice, ts);
+        update_from_lattice(global_lattice);
+    }
+
+    function run_the_lattice_offdiagonal() {
+        if (global_lattice == null) {
+            make_new_lattice()
+        }
+        let ts = parseInt(document.getElementById("timesteps").value);
+        if (isNaN(ts)) {
+            ts = 1;
+            document.getElementById("timesteps").value = ts.toString();
+        }
+
+        run_lattice_offdiagonal(global_lattice, ts);
         update_from_lattice(global_lattice);
     }
 </script>
