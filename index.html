@@ -5,21 +5,31 @@
 <body>
 
 <form onsubmit="make_new_lattice()" action="javascript:void(0);">
-    <input type="text" maxlength="4" placeholder="vars" id="num_vars" name="num_vars">
+    <input type="text" maxlength="4" placeholder="L" id="num_vars" name="num_vars">
     <input type="text" maxlength="4" placeholder="beta" id="beta" name="beta">
     <input type="text" maxlength="4" placeholder="gamma" id="gamma" name="gamma">
     <input type="submit" value="Set">
 </form>
 <form onsubmit="run_the_lattice()" action="javascript:void(0);">
-    <input type="text" placeholder="timesteps" value="1" id="timesteps" name="timesteps">
+    <input type="text" placeholder="timesteps" id="timesteps" name="timesteps">
     <input type="submit" value="Step">
 </form>
 
+<div id="ops" style="width: 50%; float: left">
 <svg width="100%" height="100%">
     <g id="variables"></g>
+    <g id="opbars"></g>
     <g id="ops"></g>
     <g id="init"></g>
 </svg>
+</div>
+<div id="graph" style="width: 50%; float: right">
+    <svg width="100%" height="100%">
+        <g id="edges"></g>
+        <g id="periodic_edges"></g>
+        <g id="spins"></g>
+    </svg>
+</div>
 
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <script src="pkg/wasm_monte_carlo.js"></script>
@@ -48,10 +58,54 @@
             .map((element, index) => index + start);
     }
 
-    function get_lattice(n, beta, gamma) {
-        let edge_as = range(0,n);
-        let edge_bs = range(0,n).map((i) => (i+1)%n);
-        let edge_js = range(0,n).map((i) => -1.0);
+    function var_cartesian(nx, num_rel_vars, var_num) {
+        let rel_var = var_num % num_rel_vars;
+        let cx = Math.floor((var_num - rel_var) / num_rel_vars) % nx;
+        let cy = Math.floor(var_num / (num_rel_vars*nx));
+        if (rel_var === 0) {
+            return [cx, cy - 0.1]
+        } else if (rel_var === 1) {
+            return [cx + 0.1, cy]
+        } else if (rel_var === 2) {
+            return [cx, cy + 0.1]
+        } else if (rel_var === 3) {
+            return [cx - 0.1, cy]
+        }
+    }
+
+    function var_index(nx, num_rel_vars, unit_x, unit_y, relative_var) {
+        return (unit_y * nx * num_rel_vars) + (unit_x * num_rel_vars) + relative_var
+    }
+
+    function get_edges(nx, ny) {
+        return range(0, ny).map((cy) =>
+            range(0, nx).map((cx) => {
+                let unit_edges = range(0, 4).map((i) => {
+                    let vara = var_index(nx, 4, cx, cy, i);
+                    let varb = var_index(nx, 4, cx, cy, (i + 1) % 4);
+                    let j = -1.0;
+                    if (i === 0) {
+                        j = 1.0
+                    }
+                    return [vara, varb, j]
+                });
+                unit_edges.push([var_index(nx, 4, cx, cy, 1), var_index(nx, 4, (cx+1)%nx, cy, 3), -1.0]);
+                unit_edges.push([var_index(nx, 4, cx, cy, 2), var_index(nx, 4, cx, (cy+1)%ny, 0), -1.0]);
+                return unit_edges;
+            })
+        ).flat(2);
+    }
+
+    function get_lattice(edges, beta, gamma) {
+        let edge_as = [];
+        let edge_bs = [];
+        let edge_js = [];
+        for (let index in edges) {
+            let item = edges[index];
+            edge_as.push(item[0]);
+            edge_bs.push(item[1]);
+            edge_js.push(item[2]);
+        }
         return Lattice.new(edge_as, edge_bs, edge_js, gamma, beta)
     }
 
@@ -62,7 +116,6 @@
     function update_from_lattice(lattice) {
         const nvars = lattice.get_nvars();
         const cutoff = lattice.get_cutoff();
-
         const data = range(0, cutoff).map((p) => {
             let nvars = lattice.get_nvars_for_op(p);
             if (typeof nvars !== 'undefined') {
@@ -79,7 +132,7 @@
             }
         }).flat();
 
-        let svg = d3.select('svg');
+        let svg = d3.select('#ops').select('svg');
         let bars = svg
             .select('#ops')
             .selectAll('rect')
@@ -103,6 +156,40 @@
                 }
             });
         bars.exit().remove();
+
+        const opbardata = range(0, cutoff)
+            .filter((p) => {
+                let nvars = lattice.get_nvars_for_op(p);
+                return (typeof nvars !== 'undefined' && nvars > 1);
+            })
+            .map((p) => {
+                let nvars = lattice.get_nvars_for_op(p);
+                let min_index = Math.min(...range(0, nvars).map((i) => lattice.get_nth_op_var_i(p, i)));
+                let max_index = Math.max(...range(0, nvars).map((i) => lattice.get_nth_op_var_i(p, i)));
+                return {p: p, min: min_index, max: max_index}
+            });
+
+        let opbars = svg
+            .select("#opbars")
+            .selectAll('line')
+            .data(opbardata);
+        opbars.enter()
+            .append('line')
+            .merge(opbars)
+            .attr('x1', function(d) {
+                return d.min*10 + 2.5
+            })
+            .attr('x2', function(d) {
+                return d.max*10 + 2.5
+            })
+            .attr('y1', function(d) {
+                return (1+d.p)*10 + 2.5
+            })
+            .attr('y2', function(d) {
+                return (1+d.p)*10 + 2.5
+            })
+            .attr('style', 'stroke:rgb(0,0,0);stroke-width:2.0');
+        opbars.exit().remove();
 
         const state_data = range(0, nvars).map(function(i) {
             return {
@@ -154,19 +241,170 @@
             .attr('y2', cutoff*10)
             .attr('style', 'stroke:rgb(175,175,175);stroke-width:2.0');
         vars.exit().remove();
+
+        let spins_data = range(0, nvars).map((i) => {
+            let [x, y] = var_cartesian(global_nx, 4, i);
+            return {
+                x: x,
+                y: y,
+                s: lattice.get_state(i)
+            }
+        });
+
+
+        let graph_svg = d3.select('#graph').select('svg');
+        let spins = graph_svg
+            .select('#spins')
+            .selectAll('circle')
+            .data(spins_data);
+        spins.enter()
+            .append('circle')
+            .merge(spins)
+            .attr('cx', function(d) {
+                return (d.x+0.2)*100
+            })
+            .attr('cy', function(d) {
+                return (d.y+0.2)*100
+            })
+            .attr('r', 2.5)
+            .attr('style', function(d) {
+                if (d.s) {
+                    return "fill:rgb(255,0,0)"
+                } else {
+                    return "fill:rgb(0,0,0)"
+                }
+            });
+        spins.exit().remove();
+
+        let edge_data = global_edges.map((item) => {
+
+            let [ax, ay] = var_cartesian(global_nx, 4, item[0]);
+            let [bx, by] = var_cartesian(global_nx, 4, item[1]);
+            let ret_val = {
+                a: item[0],
+                b: item[1],
+                ax: ax,
+                ay: ay,
+                bx: bx,
+                by: by,
+                sa: lattice.get_state(item[0]),
+                sb: lattice.get_state(item[1]),
+                j: item[2],
+                periodic: (Math.abs(ax - bx) > 1.0 || Math.abs(ay - by) > 1.0)
+            };
+            if (item[0] === 1) {
+                console.log(global_nx, 4, item[0]);
+                console.log(ret_val);
+            }
+            return ret_val;
+        });
+
+        console.log(edge_data);
+
+        let edges = graph_svg
+            .select('#edges')
+            .selectAll('line')
+            .data(edge_data.filter((d) => !d.periodic));
+        edges.enter()
+            .append('line')
+            .merge(edges)
+            .transition(500)
+            .attr('x1', function(d) {
+                return (d.ax+0.2)*100
+            })
+            .attr('x2', function(d) {
+                return (d.bx+0.2)*100
+            })
+            .attr('y1', function(d) {
+                return (d.ay+0.2)*100
+            })
+            .attr('y2', function(d) {
+                return (d.by+0.2)*100
+            })
+            .attr('style', function(d) {
+                let alpha = '';
+                if (d.periodic) {
+                    alpha = 'stroke-opacity:0.1;'
+                }
+
+                let eq = (d.sa === d.sb);
+                if ((eq && d.j < 0) || (!eq && d.j > 0)) {
+                    return 'stroke:rgb(0,0,0);stroke-width:2.0;'.concat(alpha)
+                } else {
+                    return 'stroke:rgb(255,0,0);stroke-width:2.0;'.concat(alpha)
+                }
+
+            });
+        edges.exit().remove();
+
+        let periodic_edges = graph_svg
+            .select('#periodic_edges')
+            .selectAll('line')
+            .data(edge_data.filter((d) => d.periodic));
+        periodic_edges.enter()
+            .append('line')
+            .merge(periodic_edges)
+            .transition(500)
+            .attr('x1', function(d) {
+                return (d.ax+0.2)*100
+            })
+            .attr('x2', function(d) {
+                return (d.bx+0.2)*100
+            })
+            .attr('y1', function(d) {
+                return (d.ay+0.2)*100
+            })
+            .attr('y2', function(d) {
+                return (d.by+0.2)*100
+            })
+            .attr('style', function(d) {
+                let eq = (d.sa === d.sb);
+                if ((eq && d.j < 0) || (!eq && d.j > 0)) {
+                    return 'stroke:rgb(0,0,0);stroke-width:2.0;stroke-opacity:0.1;'
+                } else {
+                    return 'stroke:rgb(255,0,0);stroke-width:2.0;stroke-opacity:0.1;'
+                }
+
+            });
+        periodic_edges.exit().remove();
+
     }
 
     let global_lattice = null;
+    let global_edges = null;
+    let global_nx = null;
     function make_new_lattice() {
         let num = parseInt(document.getElementById("num_vars").value);
         let beta = parseFloat(document.getElementById("beta").value);
         let gamma = parseFloat(document.getElementById("gamma").value);
-        global_lattice = get_lattice(num, beta, gamma);
+        if (isNaN(num)) {
+            num = 3;
+            document.getElementById("num_vars").value = num.toString();
+        }
+        if (isNaN(beta)) {
+            beta = 1.0;
+            document.getElementById("beta").value = beta.toString();
+        }
+        if (isNaN(gamma)) {
+            gamma = 1.0;
+            document.getElementById("gamma").value = gamma.toString();
+        }
+        global_nx = num;
+        global_edges = get_edges(global_nx, global_nx);
+        global_lattice = get_lattice(global_edges, beta, gamma);
         update_from_lattice(global_lattice)
     }
 
     function run_the_lattice() {
+        if (global_lattice == null) {
+            make_new_lattice()
+        }
         let ts = parseInt(document.getElementById("timesteps").value);
+        if (isNaN(ts)) {
+            ts = 1;
+            document.getElementById("timesteps").value = ts.toString();
+        }
+
         run_lattice(global_lattice, ts);
         update_from_lattice(global_lattice);
     }
