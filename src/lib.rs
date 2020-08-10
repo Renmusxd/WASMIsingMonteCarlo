@@ -3,6 +3,7 @@ use ising_monte_carlo::sse::qmc_graph::DefaultQMCGraph;
 use ising_monte_carlo::sse::qmc_traits::{LoopUpdater, OpContainer};
 use rand::rngs::OsRng;
 use wasm_bindgen::prelude::*;
+use ising_monte_carlo::sse::Op;
 
 #[wasm_bindgen]
 pub struct Lattice {
@@ -103,13 +104,13 @@ impl Lattice {
 
     pub fn get_nvars_for_op(&self, p: usize) -> Option<usize> {
         let op = self.qmc_graph.get_manager_ref().get_pth(p)?;
-        Some(op.vars.len())
+        Some(op.get_vars().len())
     }
 
     pub fn get_nth_op_var_i(&self, p: usize, i: usize) -> Option<usize> {
         let op = self.qmc_graph.get_manager_ref().get_pth(p)?;
-        if i < op.vars.len() {
-            Some(op.vars[i])
+        if i < op.get_vars().len() {
+            Some(op.get_vars()[i])
         } else {
             None
         }
@@ -117,8 +118,8 @@ impl Lattice {
 
     pub fn get_nth_op_var_i_input(&self, p: usize, i: usize) -> Option<bool> {
         let op = self.qmc_graph.get_manager_ref().get_pth(p)?;
-        if i < op.vars.len() {
-            Some(op.inputs[i])
+        if i < op.get_vars().len() {
+            Some(op.get_inputs()[i])
         } else {
             None
         }
@@ -126,8 +127,8 @@ impl Lattice {
 
     pub fn get_nth_op_var_i_output(&self, p: usize, i: usize) -> Option<bool> {
         let op = self.qmc_graph.get_manager_ref().get_pth(p).unwrap();
-        if i < op.vars.len() {
-            Some(op.outputs[i])
+        if i < op.get_vars().len() {
+            Some(op.get_outputs()[i])
         } else {
             None
         }
