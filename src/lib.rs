@@ -1,13 +1,13 @@
 extern crate console_error_panic_hook;
-use ising_monte_carlo::sse::qmc_graph::DefaultQMCGraph;
-use ising_monte_carlo::sse::qmc_traits::{LoopUpdater, OpContainer};
+use qmc::sse::DefaultQMCIsingGraph;
+use qmc::sse::*;
 use rand::rngs::OsRng;
 use wasm_bindgen::prelude::*;
-use ising_monte_carlo::sse::Op;
+use qmc::sse::Op;
 
 #[wasm_bindgen]
 pub struct Lattice {
-    qmc_graph: DefaultQMCGraph<OsRng>,
+    qmc_graph: DefaultQMCIsingGraph<OsRng>,
     beta: f64,
 }
 
@@ -37,13 +37,14 @@ impl Lattice {
                     .zip(edge_j.iter().cloned())
                     .collect();
 
-                let qmc_graph = DefaultQMCGraph::<OsRng>::new_with_rng(
+                let mut qmc_graph = DefaultQMCIsingGraph::<OsRng>::new_with_rng(
                     edges,
                     transverse,
                     nvars,
                     OsRng::default(),
                     None,
                 );
+                qmc_graph.set_run_semiclassical(true);
                 Ok(Lattice { qmc_graph, beta })
             } else {
                 Err(JsValue::from_str("Must supply some edges for graph"))

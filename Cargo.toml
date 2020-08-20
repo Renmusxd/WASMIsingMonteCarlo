@@ -1,6 +1,6 @@
 [package]
 name = "wasm_monte_carlo"
-version = "1.7.0"
+version = "2.1.0"
 authors = ["sumnernh@gmail.com <sumnernh@gmail.com>"]
 edition = "2018"
 
@@ -15,16 +15,15 @@ codegen-units = 1
 debug = true
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-Oz", "--enable-mutable-globals"]
+wasm-opt = ["-O3", "--enable-mutable-globals"]
 
 [dependencies]
 wasm-bindgen = "^0.2"
 rand = { version = "^0.7", features = ["wasm-bindgen"] }
 console_error_panic_hook = "^0.1"
 
-[dependencies.ising_monte_carlo]
-version = "^1.7"
-git = "https://github.com/Renmusxd/IsingMonteCarlo"
+[dependencies.qmc]
+version = "^2.1"
 default-features = false
 
 [dev-dependencies]
