@@ -45,6 +45,7 @@ impl Lattice {
                     None,
                 );
                 qmc_graph.set_run_semiclassical(true);
+                qmc_graph.set_run_rvb(true);
                 Ok(Lattice { qmc_graph, beta })
             } else {
                 Err(JsValue::from_str("Must supply some edges for graph"))
@@ -80,6 +81,16 @@ impl Lattice {
     pub fn run_offdiagonal_quantum_monte_carlo(&mut self, timesteps: usize) {
         (0 .. timesteps).for_each(|_| {
             self.qmc_graph.single_offdiagonal_step()
+        })
+    }
+
+    /// Run only the rvb parts of a quantum monte carlo simulation.
+    ///
+    /// # Arguments:
+    /// * `timesteps`: number of timesteps to run.
+    pub fn run_rvb_quantum_monte_carlo(&mut self, timesteps: usize) {
+        (0 .. timesteps).for_each(|_| {
+            self.qmc_graph.single_rvb_step()
         })
     }
 

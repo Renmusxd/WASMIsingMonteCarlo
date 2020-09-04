@@ -10,8 +10,14 @@
     <input type="text" maxlength="4" placeholder="gamma" id="gamma" name="gamma">
     <input type="submit" value="Set">
 </form>
-<form onsubmit="run_the_lattice()" action="javascript:void(0);">
+<form onsubmit="run_update()" action="javascript:void(0);">
     <input type="text" placeholder="timesteps" id="timesteps" name="timesteps">
+    <select name="update" id="update">
+        <option value="full">Full</option>
+        <option value="diag">Diagonal Only</option>
+        <option value="cluster">Cluster Only</option>
+        <option value="rvb">RVB Only</option>
+    </select>
     <input type="submit" value="Step">
 </form>
 
@@ -119,6 +125,10 @@
 
     function run_lattice_offdiagonal(lattice, timesteps) {
         lattice.run_offdiagonal_quantum_monte_carlo(timesteps)
+    }
+
+    function run_lattice_rvb(lattice, timesteps) {
+        lattice.run_rvb_quantum_monte_carlo(timesteps)
     }
 
     function update_from_lattice(lattice) {
@@ -300,14 +310,8 @@
                 j: item[2],
                 periodic: (Math.abs(ax - bx) > 1.0 || Math.abs(ay - by) > 1.0)
             };
-            if (item[0] === 1) {
-                console.log(global_nx, 4, item[0]);
-                console.log(ret_val);
-            }
             return ret_val;
         });
-
-        console.log(edge_data);
 
         let edges = graph_svg
             .select('#edges')
@@ -403,6 +407,20 @@
         update_from_lattice(global_lattice)
     }
 
+    function run_update() {
+        let update_type = document.getElementById("update").value;
+
+        if (update_type === "full") {
+            run_the_lattice();
+        } else if (update_type === "diag") {
+            run_the_lattice_diagonal();
+        } else if (update_type === "cluster") {
+            run_the_lattice_offdiagonal();
+        } else if (update_type === "rvb") {
+            run_the_lattice_rvb();
+        }
+    }
+
     function run_the_lattice() {
         if (global_lattice == null) {
             make_new_lattice()
@@ -442,6 +460,20 @@
         }
 
         run_lattice_offdiagonal(global_lattice, ts);
+        update_from_lattice(global_lattice);
+    }
+
+    function run_the_lattice_rvb() {
+        if (global_lattice == null) {
+            make_new_lattice()
+        }
+        let ts = parseInt(document.getElementById("timesteps").value);
+        if (isNaN(ts)) {
+            ts = 1;
+            document.getElementById("timesteps").value = ts.toString();
+        }
+
+        run_lattice_rvb(global_lattice, ts);
         update_from_lattice(global_lattice);
     }
 </script>
