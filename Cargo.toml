@@ -1,6 +1,6 @@
 [package]
 name = "wasm_monte_carlo"
-version = "2.3.0"
+version = "2.6.0"
 authors = ["sumnernh@gmail.com <sumnernh@gmail.com>"]
 edition = "2018"
 
@@ -23,7 +23,7 @@ rand = { version = "^0.7", features = ["wasm-bindgen"] }
 console_error_panic_hook = "^0.1"
 
 [dependencies.qmc]
-version = "^2.3"
+version = "^2.6"
 default-features = false
 
 [dev-dependencies]

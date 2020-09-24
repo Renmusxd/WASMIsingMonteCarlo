@@ -44,7 +44,6 @@ impl Lattice {
                     OsRng::default(),
                     None,
                 );
-                qmc_graph.set_run_semiclassical(true);
                 qmc_graph.set_run_rvb(true);
                 Ok(Lattice { qmc_graph, beta })
             } else {
