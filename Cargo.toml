@@ -1,6 +1,6 @@
 [package]
 name = "wasm_monte_carlo"
-version = "2.6.0"
+version = "2.16.0"
 authors = ["sumnernh@gmail.com <sumnernh@gmail.com>"]
 edition = "2018"
 
@@ -19,11 +19,12 @@ wasm-opt = ["-O3", "--enable-mutable-globals"]
 
 [dependencies]
 wasm-bindgen = "^0.2"
-rand = { version = "^0.7", features = ["wasm-bindgen"] }
+rand = { version = "0.8" }
+getrandom = { version = "0.2", features = ["js"] }
 console_error_panic_hook = "^0.1"
 
 [dependencies.qmc]
-version = "^2.6"
+version = "^2.16"
 default-features = false
 
 [dev-dependencies]

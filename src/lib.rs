@@ -1,5 +1,4 @@
 extern crate console_error_panic_hook;
-use qmc::sse::DefaultQMCIsingGraph;
 use qmc::sse::*;
 use rand::rngs::OsRng;
 use wasm_bindgen::prelude::*;
@@ -7,7 +6,7 @@ use qmc::sse::Op;
 
 #[wasm_bindgen]
 pub struct Lattice {
-    qmc_graph: DefaultQMCIsingGraph<OsRng>,
+    qmc_graph: DefaultQmcIsingGraph<OsRng>,
     beta: f64,
 }
 
@@ -37,9 +36,10 @@ impl Lattice {
                     .zip(edge_j.iter().cloned())
                     .collect();
 
-                let mut qmc_graph = DefaultQMCIsingGraph::<OsRng>::new_with_rng(
+                let mut qmc_graph = DefaultQmcIsingGraph::<OsRng>::new_with_rng(
                     edges,
                     transverse,
+                    0.0,
                     nvars,
                     OsRng::default(),
                     None,
@@ -88,9 +88,9 @@ impl Lattice {
     /// # Arguments:
     /// * `timesteps`: number of timesteps to run.
     pub fn run_rvb_quantum_monte_carlo(&mut self, timesteps: usize) {
-        (0 .. timesteps).for_each(|_| {
+        (0 .. timesteps).try_for_each(|_| {
             self.qmc_graph.single_rvb_step()
-        })
+        }).unwrap()
     }
 
     pub fn get_nvars(&self) -> usize {
